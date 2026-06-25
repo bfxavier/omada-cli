@@ -30,6 +30,13 @@ pip install .          # provides the `omada-mcp` command
 # no install? use:  python -m omada_cli.mcp_server
 ```
 
+Or with [`uv`](https://docs.astral.sh/uv/) — no install step at all, which is the
+nicest way to register it (the client launches `uvx`, which fetches/builds/runs):
+
+```sh
+uvx --from git+https://github.com/bfxavier/omada-cli@v0.2.0 omada-mcp
+```
+
 ## 3. Register it with a client
 
 ### Claude Code
@@ -38,6 +45,9 @@ pip install .          # provides the `omada-mcp` command
 claude mcp add omada -- omada-mcp                       # read-only
 claude mcp add omada --env OMADA_MCP_ALLOW_WRITES=1 -- omada-mcp   # + tuning
 claude mcp list                                         # verify it's registered
+
+# no install, via uv:
+claude mcp add omada -- uvx --from git+https://github.com/bfxavier/omada-cli@v0.2.0 omada-mcp
 ```
 
 ### Claude Desktop
@@ -58,7 +68,24 @@ restart the app:
 }
 ```
 
-If `omada-mcp` isn't on the app's PATH, use the module form instead:
+Or via **uv** — no prior install needed, the client builds/runs it on launch
+(use an absolute path to `uvx` if the app's PATH is minimal, e.g.
+`~/.local/bin/uvx`):
+
+```json
+{
+  "mcpServers": {
+    "omada": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/bfxavier/omada-cli@v0.2.0", "omada-mcp"],
+      "env": { "OMADA_MCP_ALLOW_WRITES": "0" }
+    }
+  }
+}
+```
+
+If `omada-mcp` isn't on the app's PATH and you'd rather not use uv, use the
+module form instead:
 
 ```json
 {

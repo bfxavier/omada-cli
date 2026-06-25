@@ -60,7 +60,24 @@ tool.
 
 ## Install
 
-### pip (recommended)
+### uv (recommended for the MCP server)
+
+[`uv`](https://docs.astral.sh/uv/) can run or install it with no manual setup —
+ideal for wiring up the MCP server (see [docs/MCP.md](docs/MCP.md)):
+
+```sh
+# run on demand straight from GitHub (no install, no PyPI needed)
+uvx --from git+https://github.com/bfxavier/omada-cli@v0.2.0 omada-mcp
+uvx --from git+https://github.com/bfxavier/omada-cli omada      # the CLI
+
+# or install the tools onto your PATH
+uv tool install git+https://github.com/bfxavier/omada-cli       # -> omada, omada-mcp
+```
+
+(The package name is `omada-cli`; the commands are `omada` and `omada-mcp`, hence
+`--from`.)
+
+### pip
 
 ```sh
 pip install --user .          # from a clone

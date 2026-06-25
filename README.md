@@ -48,6 +48,7 @@ tool.
 - **Snapshots** — `backup`, `diff`, `restore` your radio config
 - **Safety** — `--dry-run` prints the exact PATCH instead of sending it
 - **`--json`** on every read command; `raw` escape hatch for anything else
+- **MCP server** — drive it from Claude Desktop / Claude Code (see below)
 - **Zero dependencies** — Python standard library only
 
 ## Install
@@ -148,6 +149,47 @@ and future contributors aren't flying blind.
 **DFS is per-AP-model.** Some models hold DFS channels (52/100/116…), others
 silently revert to non-DFS. `omada dfs` shows you which APs are actually holding
 their configured channel.
+
+## MCP server
+
+The package ships an [MCP](https://modelcontextprotocol.io) server so an MCP
+client (Claude Desktop, Claude Code, …) can inspect and tune the network
+conversationally — *"which APs are co-channel?"*, *"move the office AP to channel
+100"*. It's pure stdlib (no `mcp` SDK needed) and speaks JSON-RPC over stdio.
+
+```sh
+omada-mcp            # provided after `pip install`; or: python -m omada_cli.mcp_server
+```
+
+**Read-only by default.** Write tools (channel/power/roaming/radio/features) are
+only registered when `OMADA_MCP_ALLOW_WRITES=1` — because this hands an LLM a
+wire to live infrastructure.
+
+Register it with **Claude Code**:
+
+```sh
+claude mcp add omada -- omada-mcp
+# allow tuning too:
+claude mcp add omada --env OMADA_MCP_ALLOW_WRITES=1 -- omada-mcp
+```
+
+…or in **Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "omada": {
+      "command": "omada-mcp",
+      "env": { "OMADA_MCP_ALLOW_WRITES": "0" }
+    }
+  }
+}
+```
+
+Tools: `omada_controller`, `omada_status`, `omada_clients`, `omada_doctor`,
+`omada_dfs`, `omada_spectrum`, `omada_aps`, `omada_wlans`, `omada_roam_get`
+(read) and — when writes are enabled — `omada_set_channel`, `omada_set_power`,
+`omada_set_roam`, `omada_set_radio`, `omada_toggle_feature`.
 
 ## Safety & scope
 

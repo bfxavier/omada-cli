@@ -26,6 +26,7 @@ Issues = "https://github.com/brunoxavier/omada-cli/issues"
 
 [project.scripts]
 omada = "omada_cli.cli:main"
+omada-mcp = "omada_cli.mcp_server:main"
 
 [tool.setuptools]
 packages = ["omada_cli"]

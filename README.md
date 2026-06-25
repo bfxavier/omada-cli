@@ -1,5 +1,7 @@
 # omada-cli
 
+[![CI](https://github.com/bfxavier/omada-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/bfxavier/omada-cli/actions/workflows/ci.yml)
+
 Command-line **radio tuning** for TP-Link Omada SDN networks — set channels,
 channel width, transmit power, and roaming/RSSI thresholds per access point,
 plus a full read-only view of devices, clients, and network health.
@@ -197,6 +199,20 @@ Tools: `omada_controller`, `omada_status`, `omada_clients`, `omada_doctor`,
 - `locate` and `block` are marked **experimental** — the controller exposes the
   fields but the action endpoints aren't officially documented; field-test them.
 - This is an unofficial tool. It is not affiliated with or endorsed by TP-Link.
+
+## Development
+
+```sh
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+ruff check omada_cli tests
+pytest --cov=omada_cli --cov-report=term-missing   # ~94% coverage
+```
+
+CI (GitHub Actions) lints and runs the suite on Python 3.9–3.13. Releases are
+cut by pushing a `vX.Y.Z` tag — a workflow checks the tag matches
+`omada_cli.__version__` (the single source of truth), builds sdist + wheel, and
+publishes a GitHub release. See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

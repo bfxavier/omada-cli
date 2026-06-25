@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omada-cli"
-version = "0.2.0"
+dynamic = ["version"]               # single source of truth: omada_cli.__version__
 description = "Command-line radio tuning for TP-Link Omada SDN (channel, power, roaming) — fills the gap the official Open API leaves."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Bruno Xavier" }]
 keywords = ["omada", "tp-link", "wifi", "sdn", "cli", "networking"]
@@ -20,9 +20,12 @@ classifiers = [
 ]
 dependencies = []  # stdlib only
 
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-cov", "ruff"]
+
 [project.urls]
-Homepage = "https://github.com/brunoxavier/omada-cli"
-Issues = "https://github.com/brunoxavier/omada-cli/issues"
+Homepage = "https://github.com/bfxavier/omada-cli"
+Issues = "https://github.com/bfxavier/omada-cli/issues"
 
 [project.scripts]
 omada = "omada_cli.cli:main"
@@ -30,3 +33,26 @@ omada-mcp = "omada_cli.mcp_server:main"
 
 [tool.setuptools]
 packages = ["omada_cli"]
+
+[tool.setuptools.dynamic]
+version = { attr = "omada_cli.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["omada_cli"]
+omit = ["omada_cli/__main__.py"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = ['if __name__ == .__main__.:', "raise NotImplementedError"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]

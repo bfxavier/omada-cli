@@ -482,6 +482,7 @@ def cmd_raw(client, cfg, args):
 
 def cmd_setup_pass(client, cfg, args):
     import getpass
+
     from . import config as cfgmod
     pw = getpass.getpass(f"controller password for {cfg['username']}: ")
     cfgmod.keychain_set(cfg["username"], pw)

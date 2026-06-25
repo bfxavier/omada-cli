@@ -5,8 +5,6 @@ Each rule reads already-fetched controller data and yields findings as
 """
 from collections import defaultdict
 
-from . import encoding
-
 
 def _actual_channel(wp):
     """'100 / 5500MHz' -> 100 (int) or None."""
@@ -95,10 +93,11 @@ def _roaming(client, aps, setting):
         out.append(("info", "roaming",
                     "forced-disassociation is ON site-wide — can make iPhones "
                     "stick/require a wifi toggle if thresholds are aggressive"))
-    # per-AP RSSI kick that is too aggressive for Apple clients
+    # The /devices list omits rssiSetting; fetch the per-EAP object for it.
     for a in aps:
+        full = client.eap(a["mac"])
         for band, key, floor in (("5G", "rssiSetting5g", -72), ("2.4", "rssiSetting2g", -78)):
-            rs = a.get(key) or {}
+            rs = full.get(key) or {}
             if rs.get("rssiEnable") and rs.get("threshold", -99) > floor:
                 out.append(("warn", "roaming",
                             f"{a.get('name')} {band}: roaming kick at "

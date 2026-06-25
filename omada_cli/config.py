@@ -8,7 +8,6 @@ if you explicitly opt in — a "password" field in the config file.
 import json
 import os
 import subprocess
-import sys
 
 CONFIG_DIR = os.path.expanduser("~/.config/omada")
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")

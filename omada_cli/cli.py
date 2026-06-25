@@ -73,11 +73,13 @@ def build_parser():
     ch.add_argument("width", type=int, choices=[20, 40, 80, 160], nargs="?", default=80)
 
     pw = add("power", "set TX power (dBm)", commands.cmd_power)
-    pw.add_argument("ap"); pw.add_argument("band", choices=["2.4", "5"])
+    pw.add_argument("ap")
+    pw.add_argument("band", choices=["2.4", "5"])
     pw.add_argument("dbm", type=int)
 
     rd = add("radio", "enable/disable a band", commands.cmd_radio)
-    rd.add_argument("ap"); rd.add_argument("band", choices=["2.4", "5"])
+    rd.add_argument("ap")
+    rd.add_argument("band", choices=["2.4", "5"])
     rd.add_argument("state", choices=["on", "off"])
 
     r = add("roam", "get/set/disable roaming kick", commands.cmd_roam)
@@ -91,7 +93,8 @@ def build_parser():
     di.add_argument("ap", help="AP name or 'all'")
 
     rn = add("rename", "rename an AP", commands.cmd_rename)
-    rn.add_argument("ap"); rn.add_argument("name")
+    rn.add_argument("ap")
+    rn.add_argument("name")
 
     for name, fn, label in [
         ("steering", commands.cmd_steering, "band steering"),
@@ -106,15 +109,19 @@ def build_parser():
     ssub = s.add_subparsers(dest="action", required=True)
     ssub.add_parser("list")
     for act in ("enable", "disable"):
-        a = ssub.add_parser(act); a.add_argument("name")
+        a = ssub.add_parser(act)
+        a.add_argument("name")
     sp = ssub.add_parser("passwd")
-    sp.add_argument("name"); sp.add_argument("password")
+    sp.add_argument("name")
+    sp.add_argument("password")
 
     # experimental
     lo = add("locate", "flash AP locate LED (experimental)", commands.cmd_locate)
-    lo.add_argument("ap"); lo.add_argument("state", choices=["on", "off"])
+    lo.add_argument("ap")
+    lo.add_argument("state", choices=["on", "off"])
     bl = add("block", "block/unblock a client (experimental)", commands.cmd_block)
-    bl.add_argument("action", choices=["block", "unblock"]); bl.add_argument("mac")
+    bl.add_argument("action", choices=["block", "unblock"])
+    bl.add_argument("mac")
 
     # snapshots
     bk = add("backup", "snapshot all AP radio config", commands.cmd_backup)
@@ -122,13 +129,14 @@ def build_parser():
     df = add("diff", "diff a snapshot vs current", commands.cmd_diff)
     df.add_argument("file")
     re = add("restore", "re-apply a snapshot", commands.cmd_restore)
-    re.add_argument("file"); re.add_argument("--setting", action="store_true",
-                                             help="also restore site features")
+    re.add_argument("file")
+    re.add_argument("--setting", action="store_true", help="also restore site features")
 
     # escape hatch + setup
     rw = add("raw", "raw API call", commands.cmd_raw)
     rw.add_argument("method", choices=["GET", "PATCH", "POST"])
-    rw.add_argument("path"); rw.add_argument("body", nargs="?")
+    rw.add_argument("path")
+    rw.add_argument("body", nargs="?")
     add("setup", "interactive config", cmd_setup, need_conn=False)
     add("setup-pass", "store password in Keychain", commands.cmd_setup_pass,
         need_conn=False)

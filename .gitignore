@@ -1,0 +1,19 @@
+# local config / secrets — never commit
+config.json
+*.local.json
+omada-backup-*.json
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# editors / os
+.DS_Store
+.vscode/
+.idea/

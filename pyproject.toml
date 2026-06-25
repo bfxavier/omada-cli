@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omada-cli"
+version = "0.2.0"
+description = "Command-line radio tuning for TP-Link Omada SDN (channel, power, roaming) — fills the gap the official Open API leaves."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Bruno Xavier" }]
+keywords = ["omada", "tp-link", "wifi", "sdn", "cli", "networking"]
+classifiers = [
+  "Environment :: Console",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: System :: Networking",
+]
+dependencies = []  # stdlib only
+
+[project.urls]
+Homepage = "https://github.com/brunoxavier/omada-cli"
+Issues = "https://github.com/brunoxavier/omada-cli/issues"
+
+[project.scripts]
+omada = "omada_cli.cli:main"
+
+[tool.setuptools]
+packages = ["omada_cli"]

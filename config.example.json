@@ -1,0 +1,12 @@
+{
+  "base_url": "https://192.168.1.99",
+  "username": "admin",
+  "controller_id": null,
+  "site": "Default",
+  "verify_tls": false,
+  "password_source": "keychain",
+  "aps": {
+    "living": "AA-BB-CC-DD-EE-01",
+    "office": "AA-BB-CC-DD-EE-02"
+  }
+}

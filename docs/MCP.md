@@ -34,7 +34,7 @@ Or with [`uv`](https://docs.astral.sh/uv/) — no install step at all, which is 
 nicest way to register it (the client launches `uvx`, which fetches/builds/runs):
 
 ```sh
-uvx --from git+https://github.com/bfxavier/omada-cli@v0.2.0 omada-mcp
+uvx --from git+https://github.com/bfxavier/omada-cli@v0.3.0 omada-mcp
 ```
 
 ## 3. Register it with a client
@@ -47,7 +47,7 @@ claude mcp add omada --env OMADA_MCP_ALLOW_WRITES=1 -- omada-mcp   # + tuning
 claude mcp list                                         # verify it's registered
 
 # no install, via uv:
-claude mcp add omada -- uvx --from git+https://github.com/bfxavier/omada-cli@v0.2.0 omada-mcp
+claude mcp add omada -- uvx --from git+https://github.com/bfxavier/omada-cli@v0.3.0 omada-mcp
 ```
 
 ### Claude Desktop
@@ -77,7 +77,7 @@ Or via **uv** — no prior install needed, the client builds/runs it on launch
   "mcpServers": {
     "omada": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/bfxavier/omada-cli@v0.2.0", "omada-mcp"],
+      "args": ["--from", "git+https://github.com/bfxavier/omada-cli@v0.3.0", "omada-mcp"],
       "env": { "OMADA_MCP_ALLOW_WRITES": "0" }
     }
   }
@@ -105,7 +105,7 @@ Point it at the command `omada-mcp` (stdio transport). That's the whole contract
 
 ## 4. Enabling writes
 
-Read tools are always available. The five **write** tools are only registered
+Read tools are always available. The **write** tools are only registered
 when the server starts with `OMADA_MCP_ALLOW_WRITES=1` — set it in the `env`
 block above. This is deliberate: it gates an LLM's ability to change live
 infrastructure behind an explicit opt-in. Leave it off unless you want the
@@ -150,11 +150,15 @@ With writes enabled:
 | `omada_aps` | no | — | AP inventory (model/fw/ip/load) |
 | `omada_wlans` | no | — | WLAN groups + SSIDs |
 | `omada_roam_get` | no | — | per-AP roaming-kick thresholds |
-| `omada_set_channel` | **yes** | `ap`, `channel`, `width` | set 5 GHz channel/width |
+| `omada_set_channel` | **yes** | `ap`, `channel` (2.4 or 5 GHz), `width` | set channel/width |
 | `omada_set_power` | **yes** | `ap`, `band`, `dbm` | set TX power |
 | `omada_set_roam` | **yes** | `ap` (or `all`), `threshold2g`, `threshold5g`, `disable` | set/disable roaming kick |
 | `omada_set_radio` | **yes** | `ap`, `band`, `state` | enable/disable a radio |
 | `omada_toggle_feature` | **yes** | `feature` (steering/fastroam/forcedisassoc/mesh), `state` | toggle a site feature |
+| `omada_ssid_create` | **yes** | `name`, `band`, `group`, `password` | create an SSID in a WLAN group |
+| `omada_ssid_delete` | **yes** | `name` | delete an SSID |
+| `omada_wlan_group_create` | **yes** | `name` | create an empty WLAN group |
+| `omada_assign_ap_group` | **yes** | `ap`, `group` | put an AP on a WLAN group |
 
 `ap` accepts a friendly name from your config's `aps` map or a MAC.
 

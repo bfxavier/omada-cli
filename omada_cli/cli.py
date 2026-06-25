@@ -67,9 +67,10 @@ def build_parser():
     add("spectrum", "channel occupancy + client histogram", commands.cmd_spectrum)
 
     # radio writes
-    ch = add("channel", "set 5GHz channel + width", commands.cmd_channel)
+    ch = add("channel", "set channel + width (2.4 or 5GHz by channel number; 0=auto)",
+             commands.cmd_channel)
     ch.add_argument("ap")
-    ch.add_argument("channel", type=int)
+    ch.add_argument("channel", type=int, help="1-13 for 2.4GHz, 36+ for 5GHz, 0=auto")
     ch.add_argument("width", type=int, choices=[20, 40, 80, 160], nargs="?", default=80)
 
     pw = add("power", "set TX power (dBm)", commands.cmd_power)
@@ -105,15 +106,31 @@ def build_parser():
         sp = add(name, f"toggle {label} site-wide", fn)
         sp.add_argument("state", choices=["on", "off"])
 
-    s = add("ssid", "list / enable / disable / set password", commands.cmd_ssid)
+    s = add("ssid", "list / create / delete / enable / disable / passwd", commands.cmd_ssid)
     ssub = s.add_subparsers(dest="action", required=True)
     ssub.add_parser("list")
-    for act in ("enable", "disable"):
+    for act in ("enable", "disable", "delete"):
         a = ssub.add_parser(act)
         a.add_argument("name")
     sp = ssub.add_parser("passwd")
     sp.add_argument("name")
     sp.add_argument("password")
+    cr = ssub.add_parser("create")
+    cr.add_argument("name")
+    cr.add_argument("--band", choices=["2.4", "5", "6", "2.4+5", "all"], default="all")
+    cr.add_argument("--group", help="WLAN group (default: Default)")
+    cr.add_argument("--password", help="WPA key (omit for open network)")
+
+    wg = add("wlan-group", "list / create / delete WLAN groups", commands.cmd_wlan_group)
+    wgs = wg.add_subparsers(dest="action", required=True)
+    wgs.add_parser("list")
+    for act in ("create", "delete"):
+        a = wgs.add_parser(act)
+        a.add_argument("name")
+
+    ag = add("ap-group", "assign an AP to a WLAN group", commands.cmd_ap_group)
+    ag.add_argument("ap")
+    ag.add_argument("group")
 
     # experimental
     lo = add("locate", "flash AP locate LED (experimental)", commands.cmd_locate)
@@ -122,6 +139,9 @@ def build_parser():
     bl = add("block", "block/unblock a client (experimental)", commands.cmd_block)
     bl.add_argument("action", choices=["block", "unblock"])
     bl.add_argument("mac")
+    fw = add("firmware", "check / start AP firmware upgrade (experimental)", commands.cmd_firmware)
+    fw.add_argument("ap")
+    fw.add_argument("--check", action="store_true", help="only report version, don't upgrade")
 
     # snapshots
     bk = add("backup", "snapshot all AP radio config", commands.cmd_backup)

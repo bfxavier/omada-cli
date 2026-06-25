@@ -276,13 +276,26 @@ def cmd_spectrum(client, cfg, args):
 # radio config (writes)
 # --------------------------------------------------------------------------
 def cmd_channel(client, cfg, args):
+    """Set the channel for whichever band the channel number implies
+    (1-13 -> 2.4 GHz, 36+ -> 5 GHz). 0 = auto (2.4 only)."""
     label, mac = resolve_ap(client, cfg, args.ap)
-    cur = client.eap(mac)["radioSetting5g"]
-    idx = encoding.channel_index(args.channel)
-    body = {"radioSetting5g": {**cur, "channel": idx,
-                               "channelWidth": encoding.width_code(args.width),
-                               "channelRange": encoding.channel_range(args.channel, args.width)}}
-    print(f"{label}: {encoding.describe_5g(cur)} -> ch{args.channel}/{args.width}MHz")
+    band = encoding.band_of_channel(args.channel)
+    if band == "2.4":
+        width = args.width if args.width in encoding.TWO_G_WIDTHS else 20
+        if args.channel != 0:
+            encoding.validate_2g(args.channel, width)
+        cur = client.eap(mac)["radioSetting2g"]
+        body = {"radioSetting2g": {**cur, "channel": str(args.channel),
+                                   "channelWidth": encoding.TWO_G_WIDTHS[width]}}
+        ch_label = "auto" if args.channel == 0 else f"ch{args.channel}"
+        print(f"{label}: 2.4GHz -> {ch_label}/{width}MHz")
+    else:
+        width = args.width if args.width != 0 else 80
+        cur = client.eap(mac)["radioSetting5g"]
+        body = {"radioSetting5g": {**cur, "channel": encoding.channel_index(args.channel),
+                                   "channelWidth": encoding.width_code(width),
+                                   "channelRange": encoding.channel_range(args.channel, width)}}
+        print(f"{label}: {encoding.describe_5g(cur)} -> ch{args.channel}/{width}MHz")
     client.eap_patch(mac, body)
     print("patched. on-air channel resyncs in ~30-60s (omada status / omada dfs).")
 
@@ -368,8 +381,20 @@ def cmd_mesh(client, cfg, args):
 
 
 # --------------------------------------------------------------------------
-# SSID
+# WLAN groups + SSIDs
 # --------------------------------------------------------------------------
+BAND_NAME_TO_CODE = {"2.4": 1, "5": 2, "6": 4, "2.4+5": 3, "all": 7}
+# fields that must be dropped when cloning an SSID into a new one
+_SSID_STRIP = ("id", "idInt", "resource", "site", "wlanId", "index")
+
+
+def _group_id(client, name):
+    for g in client.wlan_groups():
+        if g.get("name", "").lower() == name.lower():
+            return g["id"]
+    raise OmadaError(f"WLAN group '{name}' not found")
+
+
 def _find_ssid(client, name):
     for g in client.wlan_groups():
         for s in client.ssids(g["id"]):
@@ -378,9 +403,25 @@ def _find_ssid(client, name):
     raise OmadaError(f"SSID '{name}' not found")
 
 
+def _ssid_template(client):
+    """Grab any existing SSID to clone its full (version-specific) schema."""
+    for g in client.wlan_groups():
+        ssids = client.ssids(g["id"])
+        if ssids:
+            return ssids[0]
+    raise OmadaError("no existing SSID to use as a template")
+
+
 def cmd_ssid(client, cfg, args):
     if args.action == "list":
         return cmd_wlans(client, cfg, args)
+    if args.action == "create":
+        return _ssid_create(client, cfg, args)
+    if args.action == "delete":
+        wlan_id, ssid = _find_ssid(client, args.name)
+        print(f"deleting SSID '{ssid['name']}'")
+        client.delete(f"/setting/wlans/{wlan_id}/ssids/{ssid['id']}")
+        return
     wlan_id, ssid = _find_ssid(client, args.name)
     if args.action in ("enable", "disable"):
         on = args.action == "enable"
@@ -388,9 +429,54 @@ def cmd_ssid(client, cfg, args):
         client.ssid_patch(wlan_id, ssid["id"], {**ssid, "enable": on})
     elif args.action == "passwd":
         psk = dict(ssid.get("pskSetting") or {})
-        psk["wpaPsk"] = args.password
+        psk["securityKey"] = args.password   # verified field name (not wpaPsk)
         print(f"SSID '{ssid['name']}': password updated")
         client.ssid_patch(wlan_id, ssid["id"], {**ssid, "pskSetting": psk})
+
+
+def _ssid_create(client, cfg, args):
+    gid = _group_id(client, args.group) if args.group else \
+        _group_id(client, "Default")
+    tmpl = {k: v for k, v in _ssid_template(client).items() if k not in _SSID_STRIP}
+    tmpl["name"] = args.name
+    tmpl["band"] = BAND_NAME_TO_CODE.get(args.band, 7)
+    if args.password:
+        psk = dict(tmpl.get("pskSetting") or {})
+        psk["securityKey"] = args.password
+        tmpl["pskSetting"] = psk
+        tmpl["security"] = 3            # WPA-PSK
+    else:
+        tmpl["security"] = 0            # open
+    print(f"creating SSID '{args.name}' (band {args.band}) in group "
+          f"'{args.group or 'Default'}'")
+    client.post(f"/setting/wlans/{gid}/ssids", tmpl)
+
+
+# --------------------------------------------------------------------------
+# WLAN group management + per-AP group assignment
+# --------------------------------------------------------------------------
+def cmd_wlan_group(client, cfg, args):
+    if args.action == "create":
+        print(f"creating WLAN group '{args.name}'")
+        client.post("/setting/wlans", {"name": args.name, "clone": False})
+    elif args.action == "delete":
+        gid = _group_id(client, args.name)
+        print(f"deleting WLAN group '{args.name}'")
+        client.delete(f"/setting/wlans/{gid}")
+    else:  # list
+        for g in client.wlan_groups():
+            n = len(client.ssids(g["id"]))
+            print(f"{g['name']:20} {g['id']}  ({n} ssids)"
+                  + ("  [primary]" if g.get("primary") else ""))
+
+
+def cmd_ap_group(client, cfg, args):
+    label, mac = resolve_ap(client, cfg, args.ap)
+    gid = _group_id(client, args.group)
+    print(f"{label}: WLAN group -> '{args.group}'")
+    client.eap_patch(mac, {"wlanId": gid})
+    print("note: changing an AP's WLAN group resyncs its radios (~30-60s); "
+          "re-assert radio settings (channel/power/5G-off) afterward if needed.")
 
 
 # --------------------------------------------------------------------------
@@ -407,6 +493,20 @@ def cmd_block(client, cfg, args):
     on = args.action == "block"
     print(color(f"[experimental] client {args.mac} -> {'BLOCK' if on else 'unblock'}", "yellow"))
     client.patch(f"/clients/{args.mac}", {"block": on})
+
+
+def cmd_firmware(client, cfg, args):
+    label, mac = resolve_ap(client, cfg, args.ap)
+    if args.check:
+        d = next((x for x in _devices_cache(client) if x["mac"] == mac), {})
+        print(f"{label}: firmware {d.get('version')} "
+              f"({'update available' if d.get('needUpgrade') else 'up to date'})")
+        return
+    print(color(f"[experimental] {label}: starting online firmware upgrade — "
+                f"the AP will reboot.", "yellow"))
+    # Omada online-upgrade command; reboots the device on success.
+    client.post(f"/cmd/devices/{mac}/onlineUpgrade")
+    print("upgrade requested. watch progress with: omada aps")
 
 
 # --------------------------------------------------------------------------

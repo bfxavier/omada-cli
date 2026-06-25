@@ -102,3 +102,46 @@ def test_write_handler_toggle_feature(injected):
     assert out["ok"] is True
     _, body = injected.patches[-1]
     assert body["mesh"]["meshEnable"] is True
+
+
+def test_write_handler_set_channel_24ghz(injected):
+    out = mcp.t_set_channel({"ap": "office", "channel": 11})
+    assert out["ok"] is True and out["channel"] == 11
+    _, body = injected.patches[-1]
+    assert body["radioSetting2g"]["channel"] == "11"
+
+
+def test_write_handler_ssid_create(injected):
+    out = mcp.t_ssid_create({"name": "XavIoT", "band": "2.4", "group": "Basement",
+                             "password": "tzhv6666"})
+    assert out["ok"] is True
+    target, body = injected.patches[-1]
+    assert target == "/setting/wlans/grp2/ssids"
+    assert body["pskSetting"]["securityKey"] == "tzhv6666"
+
+
+def test_write_handler_ssid_delete(injected):
+    out = mcp.t_ssid_delete({"name": "Home"})
+    assert out["deleted"] == "Home"
+    assert injected.patches[-1] == ("/setting/wlans/grp1/ssids/ssid1", "DELETE")
+
+
+def test_write_handler_wlan_group_create(injected):
+    out = mcp.t_wlan_group_create({"name": "Lab"})
+    assert out["ok"] is True
+    assert injected.patches[-1] == ("/setting/wlans", {"name": "Lab", "clone": False})
+
+
+def test_write_handler_assign_ap_group(injected):
+    out = mcp.t_assign_ap_group({"ap": "basement", "group": "Basement"})
+    assert out["ok"] is True
+    _, body = injected.patches[-1]
+    assert body == {"wlanId": "grp2"}
+
+
+def test_write_tools_count_when_enabled(monkeypatch):
+    monkeypatch.setattr(mcp, "ALLOW_WRITES", True)
+    reg = mcp._build_registry()
+    for name in ("omada_ssid_create", "omada_ssid_delete", "omada_wlan_group_create",
+                 "omada_assign_ap_group"):
+        assert name in reg

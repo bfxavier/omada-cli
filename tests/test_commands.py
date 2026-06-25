@@ -109,6 +109,34 @@ def test_channel_patch(fake_client, cfg, args):
     assert body["radioSetting5g"]["channelRange"] == [5580, 5600, 5620, 5640]
 
 
+def test_channel_24ghz(fake_client, cfg, args):
+    # channel <=14 routes to the 2.4 GHz radio as a literal string
+    c.cmd_channel(fake_client, cfg, args(ap="office", channel=6, width=80))
+    _, body = fake_client.patches[-1]
+    assert "radioSetting2g" in body
+    assert body["radioSetting2g"]["channel"] == "6"
+    assert body["radioSetting2g"]["channelWidth"] == "2"    # 80 invalid on 2.4 -> 20
+
+
+def test_channel_24ghz_auto(fake_client, cfg, args):
+    c.cmd_channel(fake_client, cfg, args(ap="office", channel=0, width=20))
+    _, body = fake_client.patches[-1]
+    assert body["radioSetting2g"]["channel"] == "0"
+
+
+def test_firmware_check(fake_client, cfg, args, capsys):
+    c.cmd_firmware(fake_client, cfg, args(ap="master", check=True))
+    out = capsys.readouterr().out
+    assert "1.5.4" in out and "update available" in out  # master has needUpgrade
+    assert not fake_client.patches  # check only, no write
+
+
+def test_firmware_upgrade(fake_client, cfg, args):
+    c.cmd_firmware(fake_client, cfg, args(ap="shed", check=False))
+    target, body = fake_client.patches[-1]
+    assert target == "/cmd/devices/AA-BB-CC-00-00-03/onlineUpgrade"
+
+
 def test_power_patch_sets_custom_level(fake_client, cfg, args):
     c.cmd_power(fake_client, cfg, args(ap="living", band="5", dbm=17))
     _, body = fake_client.patches[-1]
@@ -167,12 +195,65 @@ def test_ssid_disable(fake_client, cfg, args):
 def test_ssid_passwd(fake_client, cfg, args):
     c.cmd_ssid(fake_client, cfg, args(action="passwd", name="Home", password="secret"))
     _, body = fake_client.patches[-1]
-    assert body["pskSetting"]["wpaPsk"] == "secret"
+    assert body["pskSetting"]["securityKey"] == "secret"   # verified field name
 
 
 def test_ssid_not_found(fake_client, cfg, args):
     with pytest.raises(OmadaError):
         c.cmd_ssid(fake_client, cfg, args(action="enable", name="Ghost"))
+
+
+def test_ssid_create(fake_client, cfg, args):
+    c.cmd_ssid(fake_client, cfg, args(action="create", name="XavIoT", band="2.4",
+                                      group="Basement", password="tzhv6666"))
+    target, body = fake_client.patches[-1]
+    assert target == "/setting/wlans/grp2/ssids"      # created in Basement group
+    assert body["name"] == "XavIoT" and body["band"] == 1
+    assert body["pskSetting"]["securityKey"] == "tzhv6666" and body["security"] == 3
+    assert "id" not in body and "wlanId" not in body  # clone fields stripped
+
+
+def test_ssid_create_open(fake_client, cfg, args):
+    c.cmd_ssid(fake_client, cfg, args(action="create", name="Guest", band="all",
+                                      group=None, password=None))
+    target, body = fake_client.patches[-1]
+    assert target == "/setting/wlans/grp1/ssids"      # default group
+    assert body["security"] == 0
+
+
+def test_ssid_delete(fake_client, cfg, args):
+    c.cmd_ssid(fake_client, cfg, args(action="delete", name="Home"))
+    target, verb = fake_client.patches[-1]
+    assert target == "/setting/wlans/grp1/ssids/ssid1" and verb == "DELETE"
+
+
+def test_wlan_group_create(fake_client, cfg, args):
+    c.cmd_wlan_group(fake_client, cfg, args(action="create", name="Basement2"))
+    target, body = fake_client.patches[-1]
+    assert target == "/setting/wlans" and body == {"name": "Basement2", "clone": False}
+
+
+def test_wlan_group_delete(fake_client, cfg, args):
+    c.cmd_wlan_group(fake_client, cfg, args(action="delete", name="Basement"))
+    target, verb = fake_client.patches[-1]
+    assert target == "/setting/wlans/grp2" and verb == "DELETE"
+
+
+def test_wlan_group_list(fake_client, cfg, args, capsys):
+    c.cmd_wlan_group(fake_client, cfg, args(action="list"))
+    out = capsys.readouterr().out
+    assert "Default" in out and "Basement" in out and "primary" in out
+
+
+def test_ap_group_assign(fake_client, cfg, args):
+    c.cmd_ap_group(fake_client, cfg, args(ap="basement", group="Basement"))
+    target, body = fake_client.patches[-1]
+    assert target == "AA-BB-CC-00-00-05" and body == {"wlanId": "grp2"}
+
+
+def test_ap_group_unknown_group(fake_client, cfg, args):
+    with pytest.raises(OmadaError, match="not found"):
+        c.cmd_ap_group(fake_client, cfg, args(ap="office", group="Ghost"))
 
 
 def test_block_experimental(fake_client, cfg, args, capsys):

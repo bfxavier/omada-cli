@@ -6,4 +6,4 @@ width, transmit power, or roaming/RSSI thresholds. Those operations are the
 reason this tool exists.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

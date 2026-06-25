@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-06-25
+
+Completes coverage of the Omada wifi engagement so it's fully replayable.
+
+### Added
+- `channel` now sets **2.4 GHz** too — the band is inferred from the channel
+  number (1–13 → 2.4, 36+ → 5 GHz, 0 → auto).
+- `ssid create` / `ssid delete` — create an SSID (cloning an existing one's
+  schema) in any WLAN group, or remove one.
+- `wlan-group list|create|delete` — manage WLAN groups.
+- `ap-group <ap> <group>` — assign an AP to a WLAN group (the per-AP SSID
+  isolation pattern, e.g. a basement IoT-only group).
+- `firmware <ap> [--check]` — report firmware / start an online upgrade
+  (experimental; upgrade reboots the AP).
+- MCP write tools for the above (`omada_ssid_create`, `omada_ssid_delete`,
+  `omada_wlan_group_create`, `omada_assign_ap_group`); `omada_set_channel` now
+  handles 2.4 GHz.
+
+### Fixed
+- `ssid passwd` wrote the wrong PSK field (`wpaPsk`); it now uses the verified
+  `pskSetting.securityKey`, so password changes actually take effect.
+
 ## [0.2.0] — 2026-06-25
 
 First public release.

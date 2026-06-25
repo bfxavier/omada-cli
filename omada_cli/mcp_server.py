@@ -14,7 +14,7 @@ import json
 import os
 import sys
 
-from . import __version__, diagnostics, encoding
+from . import __version__, commands, diagnostics, encoding
 from .client import OmadaClient, OmadaError
 from .commands import resolve_ap
 from .config import ConfigError, load_config, resolve_password
@@ -158,13 +158,60 @@ def t_roam_get(args):
 def t_set_channel(args):
     c, cfg = _client()
     label, mac = resolve_ap(c, cfg, args["ap"])
-    width = int(args.get("width", 80))
-    cur = c.eap(mac)["radioSetting5g"]
-    c.eap_patch(mac, {"radioSetting5g": {**cur,
-                "channel": encoding.channel_index(int(args["channel"])),
-                "channelWidth": encoding.width_code(width),
-                "channelRange": encoding.channel_range(int(args["channel"]), width)}})
-    return {"ok": True, "ap": label, "channel": args["channel"], "width": width}
+    ch = int(args["channel"])
+    if encoding.band_of_channel(ch) == "2.4":
+        width = int(args.get("width") or 20)
+        if ch != 0:
+            encoding.validate_2g(ch, width)
+        cur = c.eap(mac)["radioSetting2g"]
+        c.eap_patch(mac, {"radioSetting2g": {**cur, "channel": str(ch),
+                          "channelWidth": encoding.TWO_G_WIDTHS[width]}})
+    else:
+        width = int(args.get("width") or 80)
+        cur = c.eap(mac)["radioSetting5g"]
+        c.eap_patch(mac, {"radioSetting5g": {**cur,
+                    "channel": encoding.channel_index(ch),
+                    "channelWidth": encoding.width_code(width),
+                    "channelRange": encoding.channel_range(ch, width)}})
+    return {"ok": True, "ap": label, "channel": ch, "width": width}
+
+
+def t_ssid_create(args):
+    c, cfg = _client()
+    gid = commands._group_id(c, args.get("group") or "Default")
+    tmpl = {k: v for k, v in commands._ssid_template(c).items()
+            if k not in commands._SSID_STRIP}
+    tmpl["name"] = args["name"]
+    tmpl["band"] = commands.BAND_NAME_TO_CODE.get(args.get("band", "all"), 7)
+    if args.get("password"):
+        psk = dict(tmpl.get("pskSetting") or {})
+        psk["securityKey"] = args["password"]
+        tmpl["pskSetting"], tmpl["security"] = psk, 3
+    else:
+        tmpl["security"] = 0
+    c.post(f"/setting/wlans/{gid}/ssids", tmpl)
+    return {"ok": True, "ssid": args["name"], "group": args.get("group") or "Default"}
+
+
+def t_ssid_delete(args):
+    c, _ = _client()
+    wlan_id, ssid = commands._find_ssid(c, args["name"])
+    c.delete(f"/setting/wlans/{wlan_id}/ssids/{ssid['id']}")
+    return {"ok": True, "deleted": ssid["name"]}
+
+
+def t_wlan_group_create(args):
+    c, _ = _client()
+    c.post("/setting/wlans", {"name": args["name"], "clone": False})
+    return {"ok": True, "group": args["name"]}
+
+
+def t_assign_ap_group(args):
+    c, cfg = _client()
+    label, mac = resolve_ap(c, cfg, args["ap"])
+    gid = commands._group_id(c, args["group"])
+    c.eap_patch(mac, {"wlanId": gid})
+    return {"ok": True, "ap": label, "group": args["group"]}
 
 
 def t_set_power(args):
@@ -236,7 +283,7 @@ READ_TOOLS = [
 ]
 
 WRITE_TOOLS = [
-    ("omada_set_channel", "Set an AP's 5GHz channel and width (20/40/80).",
+    ("omada_set_channel", "Set an AP's channel + width. 1-13 = 2.4GHz, 36+ = 5GHz, 0 = auto.",
      {**_ap_arg(), "channel": {"type": "integer"}, "width": {"type": "integer", "enum": [20, 40, 80, 160]}},
      t_set_channel, ["ap", "channel"]),
     ("omada_set_power", "Set an AP's transmit power in dBm for a band.",
@@ -251,6 +298,15 @@ WRITE_TOOLS = [
     ("omada_toggle_feature", "Toggle a site-wide feature on/off.",
      {"feature": {"type": "string", "enum": ["steering", "fastroam", "forcedisassoc", "mesh"]},
       "state": {"type": "string", "enum": ["on", "off"]}}, t_toggle_feature, ["feature", "state"]),
+    ("omada_ssid_create", "Create an SSID in a WLAN group (clones an existing SSID's schema).",
+     {"name": {"type": "string"}, "band": {"type": "string", "enum": ["2.4", "5", "6", "2.4+5", "all"]},
+      "group": {"type": "string"}, "password": {"type": "string"}}, t_ssid_create, ["name"]),
+    ("omada_ssid_delete", "Delete an SSID by name.",
+     {"name": {"type": "string"}}, t_ssid_delete, ["name"]),
+    ("omada_wlan_group_create", "Create an empty WLAN group.",
+     {"name": {"type": "string"}}, t_wlan_group_create, ["name"]),
+    ("omada_assign_ap_group", "Assign an AP to a WLAN group (resyncs its radios).",
+     {**_ap_arg(), "group": {"type": "string"}}, t_assign_ap_group, ["ap", "group"]),
 ]
 
 

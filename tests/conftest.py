@@ -99,12 +99,17 @@ class FakeClient:
         return copy.deepcopy(self._setting)
 
     def wlan_groups(self):
-        return [{"id": "grp1", "name": "Default"}]
+        return [{"id": "grp1", "name": "Default", "primary": True},
+                {"id": "grp2", "name": "Basement", "primary": False}]
 
     def ssids(self, wlan_id):
-        return [{"id": "ssid1", "name": "Home", "band": 7, "enable": True,
-                 "pskSetting": {"wpaPsk": "old"}, "guestNetEnable": False,
-                 "enable11r": True}]
+        if wlan_id == "grp2":
+            return []
+        return [{"id": "ssid1", "idInt": 1, "index": 1, "resource": 0,
+                 "site": self.site_id, "wlanId": "grp1",
+                 "name": "Home", "band": 7, "enable": True, "security": 3,
+                 "pskSetting": {"securityKey": "old", "versionPsk": 4},
+                 "guestNetEnable": False, "enable11r": True}]
 
     def lan_networks(self):
         return [{"name": "Default", "interface": "lan", "gatewaySubnet": "192.168.1.1/24",
@@ -144,6 +149,14 @@ class FakeClient:
 
     def patch(self, path, body):
         self.patches.append((path, body))
+        return {"ok": True}
+
+    def post(self, path, body=None):
+        self.patches.append((path, body))
+        return {"wlanId": "newgrp"}
+
+    def delete(self, path):
+        self.patches.append((path, "DELETE"))
         return {"ok": True}
 
     def get(self, path):

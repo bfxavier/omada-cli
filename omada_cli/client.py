@@ -114,6 +114,12 @@ class OmadaClient:
             return {"_dry_run": True}
         return self._api("POST", self._s(path), body)
 
+    def delete(self, path):
+        if self.dry_run:
+            print(f"  [dry-run] DELETE {self._s(path)}")
+            return {"_dry_run": True}
+        return self._api("DELETE", self._s(path))
+
     def paginate(self, path, page_size=100, extra=""):
         """Collect all rows from a paginated list endpoint."""
         rows, page = [], 1

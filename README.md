@@ -48,10 +48,12 @@ tool.
 - **Diagnostics** — `doctor` flags co-channel overlap, airtime congestion,
   aggressive roaming kicks, firmware mismatches, mesh-on-wired, weak clients
 - **`dfs`** — shows configured vs on-air 5 GHz channel and flags radar bounces
-- **Radio config** — `channel`, `power`, `radio` (band on/off), `roam`
-  (get/set/disable RSSI kick), `rename`
+- **Radio config** — `channel` (2.4 **and** 5 GHz), `power`, `radio` (band
+  on/off), `roam` (get/set/disable RSSI kick), `rename`
 - **Site features** — `steering`, `fastroam`, `forcedisassoc`, `mesh`
-- **SSID** — `ssid list|enable|disable|passwd`
+- **SSIDs & WLAN groups** — `ssid list|create|delete|enable|disable|passwd`,
+  `wlan-group list|create|delete`, `ap-group <ap> <group>` (per-AP SSID isolation)
+- **Firmware** — `firmware <ap> [--check]` (experimental)
 - **Snapshots** — `backup`, `diff`, `restore` your radio config
 - **Safety** — `--dry-run` prints the exact PATCH instead of sending it
 - **`--json`** on every read command; `raw` escape hatch for anything else
@@ -67,7 +69,7 @@ ideal for wiring up the MCP server (see [docs/MCP.md](docs/MCP.md)):
 
 ```sh
 # run on demand straight from GitHub (no install, no PyPI needed)
-uvx --from git+https://github.com/bfxavier/omada-cli@v0.2.0 omada-mcp
+uvx --from git+https://github.com/bfxavier/omada-cli@v0.3.0 omada-mcp
 uvx --from git+https://github.com/bfxavier/omada-cli omada      # the CLI
 
 # or install the tools onto your PATH
@@ -129,6 +131,7 @@ omada spectrum                   # channel occupancy
 
 # tune radios  (add --dry-run to preview the PATCH)
 omada channel office 100 80      # 5GHz channel + width (20/40/80)
+omada channel office 6           # 2.4GHz (inferred from channel number)
 omada power living 5 20          # TX power in dBm
 omada radio basement 5 off       # turn a band off
 omada roam set all --5 -76 --2.4 -82
@@ -138,9 +141,16 @@ omada roam disable all           # rely on 802.11k/v instead
 omada steering on
 omada forcedisassoc off
 
-# SSIDs
+# SSIDs, WLAN groups, per-AP isolation
 omada ssid list
 omada ssid passwd XavIoT 'new-pre-shared-key'
+omada wlan-group create Basement
+omada ssid create XavIoT --band 2.4 --group Basement --password 'iot-key'
+omada ap-group basement Basement     # this AP now broadcasts only Basement's SSIDs
+
+# firmware (experimental)
+omada firmware shed --check          # report version
+omada firmware shed                  # start online upgrade (reboots the AP)
 
 # snapshot / restore
 omada backup before-changes.json
@@ -165,7 +175,9 @@ empirically:
 | `channelWidth` | `"2"`=20 MHz, `"3"`=40, `"5"`=80, `"6"`=160 |
 | `channelRange` | list of 20 MHz center freqs; **must match the width** or the AP widens on its own |
 | TX power | set `txPowerLevel=1` (Custom) for a dBm value to be honored — presets `3`/`4` ignore it and force max |
-| 2.4 GHz `channel` | literal number string (`"1"`/`"6"`/`"11"`, `"0"`=auto) |
+| 2.4 GHz `channel` | literal number string (`"1"`/`"6"`/`"11"`, `"0"`=auto); width 20/40 only |
+| SSID PSK | `pskSetting.securityKey` (not `wpaPsk`) |
+| WLAN group create | `POST /setting/wlans {name, clone:false}` |
 
 `omada-cli` handles all of this for you; the table is here so the `raw` command
 and future contributors aren't flying blind.

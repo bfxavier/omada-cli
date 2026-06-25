@@ -22,6 +22,20 @@ WIDTH_CODE = {20: "2", 40: "3", 80: "5", 160: "6"}
 CODE_WIDTH = {v: k for k, v in WIDTH_CODE.items()}
 
 # 2.4 GHz channel is a literal number string ("1".."13", "0" == auto).
+TWO_G_CHANNELS = list(range(1, 14))    # 1..13
+TWO_G_WIDTHS = {20: "2", 40: "3"}      # no 80 MHz on 2.4
+
+
+def band_of_channel(ch):
+    """Infer band from a channel number: <=14 is 2.4 GHz, else 5 GHz."""
+    return "2.4" if ch <= 14 else "5"
+
+
+def validate_2g(ch, width):
+    if ch not in TWO_G_CHANNELS:
+        raise EncodingError(f"{ch} is not a valid 2.4GHz channel (1-13)")
+    if width not in TWO_G_WIDTHS:
+        raise EncodingError(f"2.4GHz supports 20 or 40 MHz, not {width}")
 
 # Bonded blocks (lists of channels) used to build channelRange per width.
 _BLOCKS = {

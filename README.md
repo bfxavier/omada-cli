@@ -164,6 +164,12 @@ client (Claude Desktop, Claude Code, …) can inspect and tune the network
 conversationally — *"which APs are co-channel?"*, *"move the office AP to channel
 100"*. It's pure stdlib (no `mcp` SDK needed) and speaks JSON-RPC over stdio.
 
+📖 **Full guide: [docs/MCP.md](docs/MCP.md)** — prerequisites, verifying the
+connection, example prompts, per-tool arguments, and troubleshooting.
+
+**It authenticates exactly like the CLI** — set the CLI up first (`omada setup`)
+and confirm `omada status` works; then the MCP server will too.
+
 ```sh
 omada-mcp            # provided after `pip install`; or: python -m omada_cli.mcp_server
 ```
@@ -171,6 +177,9 @@ omada-mcp            # provided after `pip install`; or: python -m omada_cli.mcp
 **Read-only by default.** Write tools (channel/power/roaming/radio/features) are
 only registered when `OMADA_MCP_ALLOW_WRITES=1` — because this hands an LLM a
 wire to live infrastructure.
+
+Once registered, just ask: *"run omada_doctor and summarize"*, or with writes on,
+*"move the office AP to channel 100 at 80 MHz."*
 
 Register it with **Claude Code**:
 

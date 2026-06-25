@@ -1,6 +1,11 @@
 # omada-cli
 
 [![CI](https://github.com/bfxavier/omada-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/bfxavier/omada-cli/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/bfxavier/omada-cli?sort=semver)](https://github.com/bfxavier/omada-cli/releases)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](pyproject.toml)
 
 Command-line **radio tuning** for TP-Link Omada SDN networks — set channels,
 channel width, transmit power, and roaming/RSSI thresholds per access point,
